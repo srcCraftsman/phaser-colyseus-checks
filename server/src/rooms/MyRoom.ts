@@ -3,30 +3,48 @@ import { MyRoomState, Player } from "./schema/MyRoomState";
 
 export class MyRoom extends Room<MyRoomState> {
   maxClients = 4;
+  update(deltaTime: number) {
+    const velocity = 2;
+
+    this.state.players.forEach(player => {
+        let input: any;
+
+        // dequeue player inputs
+        while (input = player.inputQueue.shift()) {
+            if (input.left) {
+                player.x -= velocity;
+
+            } else if (input.right) {
+                player.x += velocity;
+            }
+
+            if (input.up) {
+                player.y -= velocity;
+
+            } else if (input.down) {
+                player.y += velocity;
+            }
+        }
+    });
+}
 
   onCreate(options: any) {
     this.setState(new MyRoomState());
+    
 
-    // handle player input
     this.onMessage(0, (client, payload) => {
-      // get reference to the player who sent the message
+      // handle player input
       const player = this.state.players.get(client.sessionId);
-      const velocity = 2;
-
-      if (payload.left) {
-        player.x -= velocity;
-
-      } else if (payload.right) {
-        player.x += velocity;
-      }
-
-      if (payload.up) {
-        player.y -= velocity;
-
-      } else if (payload.down) {
-        player.y += velocity;
-      }
+  
+      // enqueue input to user input buffer.
+      player.inputQueue.push(payload);
+      this.setSimulationInterval((deltaTime) => {
+        this.update(deltaTime);
     });
+  });
+
+  
+  
   }
 
   onJoin(client: Client, options: any) {
